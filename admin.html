@@ -1,0 +1,16 @@
+<h2>So you want to add a topic, huh?</h2>
+
+<h3>Categories</h3>
+<hr>
+{% for cat, topics in categories.items() %}
+<div>
+    <h4>{{cat.title()}}</h4>
+    <ul>
+        {% for topic in topics %}
+        <li>{{topic}}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endfor %}
+<hr>
+
