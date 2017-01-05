@@ -2,15 +2,24 @@
 
 <h3>Categories</h3>
 <hr>
-{% for cat, topics in categories.items() %}
+{% for cat in categories %}
 <div>
-    <h4>{{cat.title()}}</h4>
+    <h4>{{cat.name.title()}}</h4>
     <ul>
-        {% for topic in topics %}
+        {% for topic in cat.topics %}
         <li>{{topic}}</li>
         {% endfor %}
     </ul>
+    <form action="/admin" method="post">
+        <div style="margin-left: 1em;">
+            <p> Add a topic to {{cat.name.title()}} </p>
+            Topic: 
+            <input type="hidden" name="category" value="{{cat.name}}">
+            <input name="topic">
+            <input type="submit" value="Submit"> 
+        </div>
+    </form>
 </div>
-{% endfor %}
 <hr>
+{% endfor %}
 
