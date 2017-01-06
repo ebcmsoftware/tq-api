@@ -41,14 +41,44 @@ class TopicHandler(webapp2.RequestHandler):
         '''
         cat = self.request.get('category')
         topic = self.request.get('topic')
-        if not cat or not topic:
+        if not cat:
             self.error(400)
+        elif cat and not topic:
+            key = ndb.Key('Category', cat.lower())
+            new_category = Category(parent=key, name=cat.lower(), topics=[])
+            new_category.put()
+        else:
+            key = ndb.Key('Category', cat.lower())
+            cat = Category.query(ancestor=key).fetch()[0]
+            cat.topics.append(topic)
+            cat.put()
+        time.sleep(.25)
+        self.redirect('/admin')
 
-        key = ndb.Key('Category', cat)
-        cat = Category.query(ancestor=key).fetch()[0]
-        cat.topics.append(topic)
-        cat.put()
-        time.sleep(.5)
+
+class DeleteHandler(webapp2.RequestHandler):
+    '''
+    Resopnsible for deleting categories or topics
+    '''
+    def post(self):
+        cat = self.request.get('category')
+        topic = self.request.get('topic')
+        print(cat)
+        print(topic)
+        if not cat:
+            self.error(400)
+        elif cat and not topic:
+            category = Category.query(Category.name == cat).fetch()[0]
+            print(category)
+            print(category)
+            print(category)
+            category.key.delete()
+        else:
+            print(topic)
+            category = Category.query(Category.name == cat).fetch()[0]
+            category.topics = [x for x in category.topics if x != topic]
+            category.put()
+        time.sleep(.25)
         self.redirect('/admin')
 
 
@@ -71,6 +101,7 @@ class ApiHandler(webapp2.RequestHandler):
 
 app = webapp2.WSGIApplication([
     ('/', TopicHandler),
+    ('/delete', DeleteHandler),
     ('/admin', TopicHandler),
     ('/api', ApiHandler),
 ], debug=True)

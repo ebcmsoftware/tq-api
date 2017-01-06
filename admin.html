@@ -5,21 +5,53 @@
 {% for cat in categories %}
 <div>
     <h4>{{cat.name.title()}}</h4>
+    {# Form for adding a topic #}
+    <form action="/admin" method="post">
+        <div style="margin-left: 1em;">
+            <p> Add a topic to {{cat.name.title()}} </p>
+            Topic: <input type="hidden" name="category" value="{{cat.name}}">
+            <input name="topic">
+            <input type="submit" value="Submit"> 
+        </div>
+    </form>
+
     <ul>
         {% for topic in cat.topics %}
         <li>{{topic}}</li>
         {% endfor %}
     </ul>
-    <form action="/admin" method="post">
+
+    <br>
+
+    {# Form for deleting a topic from a category #}
+    <form action="/delete" method="post">
+        <input type="hidden" name="category" value="{{cat.name}}">
+        Enter a topic to delete from {{cat.name.title()}}
         <div style="margin-left: 1em;">
-            <p> Add a topic to {{cat.name.title()}} </p>
-            Topic: 
-            <input type="hidden" name="category" value="{{cat.name}}">
-            <input name="topic">
-            <input type="submit" value="Submit"> 
+            Topic <input name="topic">
+            <input type=submit style="color: red;" value="Delete this topic" onclick="return confirm('are u really sure u wanna delete a topic from {{cat.name}}?');">
+        </div>
+    </form>
+
+    {# Form for deleting the category #}
+    <form action="/delete" method="post">
+        <input type="hidden" name="category" value="{{cat.name}}">
+        <div style="margin-left: 1em;">
+            <input type=submit style="color: red;" value="Delete this category" onclick="return confirm('are u really sure u wanna delete {{cat.name}}?');">
         </div>
     </form>
 </div>
 <hr>
+<hr>
+<hr>
+<h4>Add a new category</h4>
+<form action="/admin" method="post">
+    <div style="margin-left: 1em;">
+        Category name: <input name="category">
+        <input type="submit" value="Submit"> 
+    </div>
+</form>
+<hr>
+
 {% endfor %}
 
