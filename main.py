@@ -16,8 +16,27 @@ JINJA_ENVIRONMENT = jinja2.Environment(
 )
 
 class Category(ndb.Model):
+    '''
+    topic_data will be stored as a dict of dicts containing Gtrends data. For example,
+    topic_data = {
+        'obama': {
+            'December 2003': 0.0,
+            'November 2008': 100.0,
+            'December 2008': 98.0,
+            ...
+        },
+        'trump': {
+            'December 2003': 9.0,
+            'November 2008': 69.0,
+            'December 2008': 42.0,
+            ...
+        },
+        ...
+    }
+    '''
     name = ndb.StringProperty()
     topics = ndb.StringProperty(repeated=True)
+    topic_data = ndb.JsonProperty()
 
 class TopicHandler(webapp2.RequestHandler):
     '''
@@ -25,9 +44,6 @@ class TopicHandler(webapp2.RequestHandler):
     '''
     def get(self):
         template_values = {}
-
-        #temp_cat = Category(parent=ndb.Key('Category', 'sports'), name='sports', topics=[])
-        #temp_cat.put()
 
         cats = Category.query().fetch()
 
@@ -63,23 +79,41 @@ class DeleteHandler(webapp2.RequestHandler):
     def post(self):
         cat = self.request.get('category')
         topic = self.request.get('topic')
-        print(cat)
-        print(topic)
         if not cat:
             self.error(400)
         elif cat and not topic:
             category = Category.query(Category.name == cat).fetch()[0]
-            print(category)
-            print(category)
-            print(category)
             category.key.delete()
         else:
-            print(topic)
             category = Category.query(Category.name == cat).fetch()[0]
             category.topics = [x for x in category.topics if x != topic]
             category.put()
         time.sleep(.25)
         self.redirect('/admin')
+
+
+class TrendDataHandler(webapp2.RequestHandler):
+    '''
+    Handles adding stuff (via jason) to the categories.
+
+    Required params: 
+    * category (i.e., 'politics')
+    * topic (i.e., 'trump')
+    * topic_data (as a dict of trends data, in the format specified above: i.e., {'December 2016': 98.0, ...})
+    '''
+    def post(self):
+        cat = self.request.get('category')
+        topic = self.request.get('topic')
+        data = self.request.get('topic_data')
+        if not (cat and topic and topic_data):
+            self.error(400)
+        topic_dict = json.loads(data)
+        category = Category.query(Category.name == cat).fetch()[0]
+        if not category.topic_dict:
+            category.topic_dict = {}
+        # TODO: play around with some play data, get it showing. make sure it's in there and appendable. 
+        category.topic_dict[topic] = topic_dict
+        category.put()
 
 
 class ApiHandler(webapp2.RequestHandler):
@@ -102,6 +136,7 @@ class ApiHandler(webapp2.RequestHandler):
 app = webapp2.WSGIApplication([
     ('/', TopicHandler),
     ('/delete', DeleteHandler),
+    ('/add_trends_data', TrendDataHandler),
     ('/admin', TopicHandler),
     ('/api', ApiHandler),
 ], debug=True)
