@@ -6,6 +6,13 @@ import jinja2
 import os
 import yaml
 import time
+import six
+
+from requests_toolbelt.adapters import appengine
+appengine.monkeypatch()
+
+from pytrends.request import TrendReq
+from get_data import get_query
 
 from google.appengine.ext import ndb
 
@@ -38,6 +45,22 @@ class Category(ndb.Model):
     topics = ndb.StringProperty(repeated=True)
     topic_data = ndb.JsonProperty()
 
+def trends_to_json_format(trends_dict):
+    '''
+    converts the ugly ass mess of google trends api data to something like  {
+        'December 2003': 9.0,
+        'November 2008': 69.0,
+        'December 2008': 42.0,
+    }
+    '''
+    row_data = trends_dict['table']['rows']
+    json_data = []
+    for month in row_data:
+        monthstring = month['c'][0]['f']  # ex. "December 2003"
+        percentage = month['c'][1]['v']  # ex. 42.0
+        json_data.append((monthstring, percentage))
+    return json_data
+
 class TopicHandler(webapp2.RequestHandler):
     '''
     Allows us to add topics
@@ -65,9 +88,19 @@ class TopicHandler(webapp2.RequestHandler):
             new_category.put()
         else:
             key = ndb.Key('Category', cat.lower())
-            cat = Category.query(ancestor=key).fetch()[0]
-            cat.topics.append(topic)
-            cat.put()
+            category = Category.query(ancestor=key).fetch()[0]
+            category.topics.append(topic)
+
+            trend_data = get_query(topic)
+
+            topic_json_data = trends_to_json_format(trend_data)
+            print(topic_json_data)
+
+            if not category.topic_data:
+                category.topic_data = {}
+            category.topic_data[topic] = topic_json_data
+            category.put()
+
         time.sleep(.25)
         self.redirect('/admin')
 
@@ -87,6 +120,8 @@ class DeleteHandler(webapp2.RequestHandler):
         else:
             category = Category.query(Category.name == cat).fetch()[0]
             category.topics = [x for x in category.topics if x != topic]
+            if category.topic_data and topic in category.topic_data:
+                category.topic_data.pop(topic, 0)
             category.put()
         time.sleep(.25)
         self.redirect('/admin')
@@ -99,21 +134,14 @@ class TrendDataHandler(webapp2.RequestHandler):
     Required params: 
     * category (i.e., 'politics')
     * topic (i.e., 'trump')
-    * topic_data (as a dict of trends data, in the format specified above: i.e., {'December 2016': 98.0, ...})
     '''
     def post(self):
         cat = self.request.get('category')
         topic = self.request.get('topic')
-        data = self.request.get('topic_data')
+
         if not (cat and topic and topic_data):
             self.error(400)
-        topic_dict = json.loads(data)
-        category = Category.query(Category.name == cat).fetch()[0]
-        if not category.topic_dict:
-            category.topic_dict = {}
-        # TODO: play around with some play data, get it showing. make sure it's in there and appendable. 
-        category.topic_dict[topic] = topic_dict
-        category.put()
+
 
 
 class ApiHandler(webapp2.RequestHandler):
